@@ -319,7 +319,7 @@ installElasticsearch() {
         # Start Elasticsearch
         startService "elasticsearch"
         echo "Initializing Elasticsearch..."
-        until $(curl -XGET https://localhost:9200/ -uadmin:admin -k --max-time 120 --silent --output /dev/null); do
+        until $(curl --noproxy "*" -XGET https://localhost:9200/ -uadmin:admin -k --max-time 120 --silent --output /dev/null); do
             echo -ne ${char}
             sleep 10
         done    
@@ -383,8 +383,9 @@ installKibana() {
         eval "mkdir /usr/share/kibana/data ${debug}"
         eval "chown -R kibana:kibana /usr/share/kibana/ ${debug}"
         eval "cd /usr/share/kibana ${debug}"
-        eval "sudo -u kibana /usr/share/kibana/bin/kibana-plugin install '${repobaseurl}'/ui/kibana/wazuh_kibana-${WAZUH_VER}_${ELK_VER}-${WAZUH_KIB_PLUG_REV}.zip ${debug}"
-        if [  "$?" != 0  ]; then
+        #eval "proxychains4 sudo -u kibana /usr/share/kibana/bin/kibana-plugin install '${repobaseurl}'/ui/kibana/wazuh_kibana-${WAZUH_VER}_${ELK_VER}-${WAZUH_KIB_PLUG_REV}.zip ${debug}"
+        eval "sudo -u kibana /usr/share/kibana/bin/kibana-plugin install http://localhost:81/wazuh_kibana-4.2.4_7.10.2-1.zip ${debug}"
+	if [  "$?" != 0  ]; then
             echo "Error: Wazuh Kibana plugin could not be installed."
             rollBack
 
@@ -572,7 +573,7 @@ checkInstallation() {
     ra="  password: "
     wazuhpass="${wazuhpass//$ra}"
     logger "Checking the installation..."
-    eval "curl -XGET https://localhost:9200 -uwazuh:${wazuhpass} -k --max-time 300 ${debug}"
+    eval "curl --noproxy \"*\" -XGET https://localhost:9200 -uwazuh:${wazuhpass} -k --max-time 300 ${debug}"
     if [  "$?" != 0  ]; then
         echo "Error: Elasticsearch was not successfully installed."
         rollBack
@@ -589,7 +590,7 @@ checkInstallation() {
         echo "Filebeat installation succeeded."
     fi    
     logger "Initializing Kibana (this may take a while)"
-    until [[ "$(curl -XGET https://localhost/status -I -uwazuh:${wazuhpass} -k -s --max-time 300 | grep "200 OK")" ]]; do
+    until [[ "$(curl --noproxy "*" -XGET https://localhost/status -I -uwazuh:${wazuhpass} -k -s --max-time 300 | grep "200 OK")" ]]; do
         echo -ne $char
         sleep 10
     done    
